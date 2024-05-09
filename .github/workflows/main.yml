@@ -5,58 +5,33 @@ on:
     branches:
       - "main"
     paths-ignore:
-      - "*.txt"
+      - imagens/**
+      - .github/workflows/main.yml
 jobs:
   githubactions-senai:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: INSTALL PACKAGES
-        run: |
-          sudo apt update -y
-          sudo apt-get install figlet unzip -y
 
-          curl https://static.snyk.io/cli/latest/snyk-linux -o snyk
-          chmod +x ./snyk
-          mv ./snyk /usr/local/bin/
+      - name: Instalacao do SSH
+        run: sudo apt-get install -y openssh-client
 
-          sudo apt-get update && sudo apt-get install -y gnupg software-properties-common
-          wget -O- https://apt.releases.hashicorp.com/gpg | \
-            gpg --dearmor | \
-            sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg > /dev/null
-          
-          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
-            https://apt.releases.hashicorp.com $(lsb_release -cs) main" | \
-            sudo tee /etc/apt/sources.list.d/hashicorp.list
-
-          sudo apt update -y
-
-          sudo apt-get install terraform -y
-
-      - name: SNYK AUTH
-        run : |
-          snyk -d auth $SNYK_TOKEN
+      - name: Verificacao da chave PEM
+        run: echo "$KEY_PATH"
         env:
-          SNYK_TOKEN: ${{ secrets.SNYK_AUTH_TOKEN }}
-      - name: Configure AWS CLI
-        if: always() 
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: us-east-1
+          KEY_PATH: ${{ secrets.CHAVE_PEM }}
 
-      - name: Test aws cli
-        if: always()
-        run: aws sts get-caller-identity
-      
-      - name: Terraform Apply
-        if: always()
+      - name: Adicionar host EC2 ao known_hosts
         run: |
-          COMMIT_SHA=$(echo $GITHUB_SHA | cut -c 1-5)
-          terraform init
-          terraform apply -var="github_sha=$COMMIT_SHA" --auto-approve
-        env:
-          GITHUB_SHA: ${{ github.sha }}
+          ssh-keygen -t rsa -b 4096 -f ~/ .ssh/id_rsa -N ''
+          ssh-keyscan -H 44.220.152.6 >> ~/.shh/known_hosts
+
+      - name: Envio das imagens SCP
+        if: always()
+        run: 
+          echo "$KEY_PATH" > ./chave.pem
+          chmod 600 ./chave.pem
+          scp -i ./chave.pem imagens/*.* ec2-user@44.220.152.6:/home/ec2-user/efs
+        env: 
+          KEY_PATH: ${{ secrets.CHAVE_PEM }}
