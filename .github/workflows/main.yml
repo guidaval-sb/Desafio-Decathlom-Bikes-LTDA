@@ -5,7 +5,7 @@ on:
     branches:
       - "main"
     paths-ignore:
-      - imagens/**
+      - images/**
       - .github/workflows/main.yml
 jobs:
   githubactions-senai:
