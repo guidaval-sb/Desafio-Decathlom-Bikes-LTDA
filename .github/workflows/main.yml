@@ -29,7 +29,7 @@ jobs:
 
       - name: Envio das imagens SCP
         if: always()
-        run: 
+        run: |
           echo "$KEY_PATH" > ./chave.pem
           chmod 600 ./chave.pem
           scp -i ./chave.pem imagens/*.* ec2-user@44.220.152.6:/home/ec2-user/efs
